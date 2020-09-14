@@ -260,6 +260,23 @@ void morse_write() {
                 case 13: key = KEY_Q; break;
             }
             break;
+        case 5:
+            switch (morse_sequence) {
+                case 0: key = KEY_5; break;
+                case 1: key = KEY_4; break;
+                case 3: key = KEY_3; break;
+                case 7: key = KEY_2; break;
+                case 10: key = KEY_KPPLUS; break;
+                case 15: key = KEY_1; break;
+                case 16: key = KEY_6; break;
+                case 17: key = KEY_EQUAL; break;
+                case 18: key = KEY_SLASH; break;
+                case 24: key = KEY_7; break;
+                case 28: key = KEY_8; break;
+                case 30: key = KEY_9; break;
+                case 31: key = KEY_0; break;
+            }
+            break;
     }
     if (key != 0) {
         send_key(key, 1, 1);

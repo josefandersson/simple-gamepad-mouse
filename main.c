@@ -216,52 +216,55 @@ void morse_reset() {
 }
 
 void morse_write() {
-    unsigned char character = 0;
+    unsigned short key = 0;
     switch (morse_index) {
         case 1:
             switch (morse_sequence) {
-                case 0: character = 'e'; break;
-                case 1: character = 't'; break;
+                case 0: key = KEY_E; break;
+                case 1: key = KEY_T; break;
             }
             break;
         case 2:
             switch (morse_sequence) {
-                case 0: character = 'i'; break;
-                case 1: character = 'a'; break;
-                case 2: character = 'n'; break;
-                case 3: character = 'm'; break;
+                case 0: key = KEY_I; break;
+                case 1: key = KEY_A; break;
+                case 2: key = KEY_N; break;
+                case 3: key = KEY_M; break;
             }
             break;
         case 3:
             switch (morse_sequence) {
-                case 0: character = 's'; break;
-                case 1: character = 'u'; break;
-                case 2: character = 'r'; break;
-                case 3: character = 'w'; break;
-                case 4: character = 'd'; break;
-                case 5: character = 'k'; break;
-                case 6: character = 'g'; break;
-                case 7: character = 'o'; break;
+                case 0: key = KEY_S; break;
+                case 1: key = KEY_U; break;
+                case 2: key = KEY_R; break;
+                case 3: key = KEY_W; break;
+                case 4: key = KEY_D; break;
+                case 5: key = KEY_K; break;
+                case 6: key = KEY_G; break;
+                case 7: key = KEY_O; break;
             }
             break;
         case 4:
             switch (morse_sequence) {
-                case 0: character = 'h'; break;
-                case 1: character = 'v'; break;
-                case 2: character = 'f'; break;
-                case 4: character = 'l'; break;
-                case 6: character = 'p'; break;
-                case 7: character = 'j'; break;
-                case 8: character = 'b'; break;
-                case 9: character = 'x'; break;
-                case 10: character = 'c'; break;
-                case 11: character = 'y'; break;
-                case 12: character = 'z'; break;
-                case 13: character = 'q'; break;
+                case 0: key = KEY_H; break;
+                case 1: key = KEY_V; break;
+                case 2: key = KEY_F; break;
+                case 4: key = KEY_L; break;
+                case 6: key = KEY_P; break;
+                case 7: key = KEY_J; break;
+                case 8: key = KEY_B; break;
+                case 9: key = KEY_X; break;
+                case 10: key = KEY_C; break;
+                case 11: key = KEY_Y; break;
+                case 12: key = KEY_Z; break;
+                case 13: key = KEY_Q; break;
             }
             break;
     }
-    printf("Morse code: %d gave character %c\n", morse_sequence, character);
+    if (key != 0) {
+        send_key(key, 1, 1);
+        send_key(key, 0, 1);
+    }
     morse_reset();
 }
 

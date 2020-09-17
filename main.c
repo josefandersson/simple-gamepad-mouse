@@ -11,6 +11,10 @@
 #include <sys/types.h>
 #include <pthread.h>
 
+#include "mappings.c"
+
+#define LENGTH(X) (sizeof X / sizeof X[0])
+
 #define DEVICE_JS0 "/dev/input/js0"
 #define DEVICE_UINPUT "/dev/uinput"
 
@@ -19,15 +23,40 @@
 #define SPEED_MIN 7.0
 #define SPEED_MAX 20.0
 
+typedef union {
+    unsigned short us;
+} Arg;
+
+typedef struct {
+    unsigned char number;
+    unsigned char mask;
+    void (*func)(const Arg *);
+    const Arg arg;
+} ButtonRule;
+
+typedef struct {
+    unsigned char number;
+    unsigned char modifier;
+    unsigned char switches;
+    void (*func)(const Arg *);
+    const Arg arg;
+} AxisRule;
+
 int emit(unsigned short type, unsigned short code, int value);
 double joystick_to_mouse(int joystick_value);
 void loop();
 void *loop_mouse(void *arg);
-void morse_reset();
-void morse_input(int code); // 0=short, 1=long
+static void morse_reset_or_backspace(const Arg *arg);
+static void morse_input(const Arg *arg);
+static void morse_write_or_space(const Arg *arg);
+static void mouse_movement(const Arg *arg);
+static void mouse_multiplier(const Arg *arg);
+static void mouse_scroll(const Arg *arg);
 void morse_write();
-void send_key(unsigned short code, int value, int sync);
+static void send_key(const Arg *arg);
 int setup();
+
+#include "config.h"
 
 struct js_event js_ev;
 struct uinput_user_dev uinp;
@@ -36,10 +65,11 @@ struct input_event inp_ev;
 static int js_fd;
 static int uinp_fd;
 
+static int button_states;
+
+static char modifiers;
 static double mouse_x, mouse_y, mouse_multi = SPEED_MAX;
 static int scroll_x, scroll_y;
-
-static int morse_mode;
 static unsigned char morse_index;
 static unsigned char morse_sequence;
 
@@ -56,6 +86,20 @@ double joystick_to_mouse(int joystick_value) {
     return !(-JT_THRES < joystick_value && joystick_value < JT_THRES) * (joystick_value / 32768.0);
 }
 
+static void mouse_movement(const Arg *arg) {
+    if (arg->us == X) mouse_x = joystick_to_mouse(js_ev.value);
+    else              mouse_y = joystick_to_mouse(js_ev.value);
+}
+
+static void mouse_multiplier(const Arg *arg) {
+    mouse_multi = (1 - (js_ev.value + 32768) / 65536.0) * (SPEED_MAX - SPEED_MIN) + SPEED_MIN;
+}
+
+static void mouse_scroll(const Arg *arg) {
+    if (arg->us == X) scroll_x = joystick_to_mouse(js_ev.value) * 2;
+    else              scroll_y = -joystick_to_mouse(js_ev.value) * 2;
+}
+
 void loop() {
     while (1) {
         if (read(js_fd, &js_ev, sizeof(struct js_event)) < 0) {
@@ -66,86 +110,23 @@ void loop() {
         }
 
         if (js_ev.type == JS_EVENT_BUTTON) {
-            // printf("BTN   Event: time:%d, value:%d, type:%d, number:%d\n", js_ev.time, js_ev.value, js_ev.type, js_ev.number);
-            switch (js_ev.number) {
-                case 0: // A
-                    if (morse_mode) {
-                        if (js_ev.value)
-                            morse_input(0);
-                    } else {
-                        send_key(BTN_LEFT, js_ev.value, 1);
-                    }
-                    break; 
-                case 1: // B
-                    if (morse_mode) {
-                        if(js_ev.value)
-                            morse_input(1);
-                    } else {
-                        send_key(BTN_RIGHT, js_ev.value, 1);
-                    }
-                    break; 
-                case 2: // X
-                    if (morse_mode) {
-                        if (js_ev.value)
-                            morse_reset();
-                    } else {
-                        send_key(KEY_BACKSPACE, js_ev.value, 1);
-                    }
+            for (int i = 0; i < LENGTH(btnRules); i++) {
+                if(btnRules[i].number == js_ev.number && (btnRules[i].mask & button_states) == btnRules[i].mask) {
+                    btnRules[i].func(&btnRules[i].arg);
+                    printf("Button %d matches, mask:%d\n", js_ev.number, btnRules[i].mask);
                     break;
-                case 3: // Y
-                    if (morse_mode) {
-                        if (js_ev.value) {
-                            if (morse_index == 0) {
-                                send_key(KEY_SPACE, 1, 1);
-                                send_key(KEY_SPACE, 0, 1);
-                            } else
-                                morse_write();
-                        }
-                    } else {
-                        send_key(KEY_SPACE, js_ev.value, 1);
-                    }
-                    break;
-                case 4: break; // left btn
-                case 5: // right btn
-                    if (js_ev.value == 1) {
-                        morse_mode = 1;
-                    } else {
-                        morse_mode = 0;
-                        morse_reset();
-                    }
-                    break;
-                case 6: break; // back
-                case 7: send_key(KEY_ENTER, js_ev.value, 1); break; // start
-                case 8: break; // home
-                case 9: send_key(KEY_ESC, js_ev.value, 1); break; // left joystick
-                case 10: send_key(BTN_MIDDLE, js_ev.value, 1); break; // right joystick
-                case 11: send_key(KEY_LEFT, js_ev.value, 1); break;   // left arw
-                case 12: send_key(KEY_RIGHT, js_ev.value, 1); break;  // right arw
-                case 13: send_key(KEY_UP, js_ev.value, 1); break;     // up arw
-                case 14: send_key(KEY_DOWN, js_ev.value, 1); break;   // down arw
+                }
             }
+            button_states = js_ev.value ?
+                button_states | GPB_TO_MOD(js_ev.number) :
+                button_states & ~GPB_TO_MOD(js_ev.number);
         } else if (js_ev.type == JS_EVENT_AXIS) {
-            switch (js_ev.number) {
-                // LEFT JOYSTICK
-                case 0: mouse_x = joystick_to_mouse(js_ev.value); break;
-                case 1: mouse_y = joystick_to_mouse(js_ev.value); break;
-                
-                // LEFT BUMPER
-                case 2: mouse_multi = (1 - (js_ev.value + 32768) / 65536.0) * (SPEED_MAX - SPEED_MIN) + SPEED_MIN; break;
-                
-                // RIGHT JOYSTICK
-                case 3: scroll_x = joystick_to_mouse(js_ev.value) * 2; break;
-                case 4: scroll_y = -joystick_to_mouse(js_ev.value) * 2; break;
-
-                // RIGHT BUMPER
-                case 5:
-                    break;
-
-                // ARROW AXISES
-                case 6:
-                case 7:
-                    break;
+            for (int i = 0; i < LENGTH(axisRules); i++) {
+                AxisRule rule = axisRules[i];
+                if (rule.number == js_ev.number)
+                    rule.func(&rule.arg);
             }
+            // button_states = js_ev.value + 32768 > JT_THRES ? button_states | GPB_TO_MOD(js_ev.number) : button_states & ~GPB_TO_MOD(js_ev.number);
         }
 
         usleep(10);
@@ -155,10 +136,8 @@ void loop() {
 void *loop_mouse(void *arg) {
     int scroll_x_wait = 0, scroll_y_wait = 0;
     while (1) {
-        if (mouse_x != 0)
-            emit(EV_REL, REL_X, mouse_x * mouse_multi);
-        if (mouse_y != 0)
-            emit(EV_REL, REL_Y, mouse_y * mouse_multi);
+        if (mouse_x != 0) emit(EV_REL, REL_X, mouse_x * mouse_multi);
+        if (mouse_y != 0) emit(EV_REL, REL_Y, mouse_y * mouse_multi);
 
         if (scroll_x != 0) {
             if (--scroll_x_wait < 0) {
@@ -202,17 +181,46 @@ int main() {
     return 0;
 }
 
-void morse_input(int code) {
+static void morse_input(const Arg *arg) {
+    if (!js_ev.value)
+        return;
     morse_index++;
-    morse_sequence <<= 1;
-    morse_sequence |= code;
+    morse_sequence = (morse_sequence << 1) | (arg->us == MORSE_LONG);
     if (morse_index > 4)
         morse_write();
 }
 
-void morse_reset() {
+static void morse_reset() {
     morse_index = 0;
     morse_sequence = 0;
+}
+
+static void morse_reset_or_backspace(const Arg *arg) {
+    if (!js_ev.value)
+        return;
+    if (morse_index == 0) {
+        Arg narg = { .us=KEY_BACKSPACE };
+        send_key(&narg);
+    } else {
+        morse_reset();
+    }
+}
+
+static void morse_write_or_space(const Arg *arg) {
+    if (!js_ev.value)
+        return;
+    if (arg->us != 0)
+        send_key(arg);
+    if (morse_index == 0) {
+        Arg narg = { .us = KEY_SPACE };
+        send_key(&narg);
+    } else {
+        morse_write();
+    }
+    if (arg->us != 0) {
+        js_ev.value = 0;
+        send_key(arg);
+    }
 }
 
 void morse_write() {
@@ -279,16 +287,21 @@ void morse_write() {
             break;
     }
     if (key != 0) {
-        send_key(key, 1, 1);
-        send_key(key, 0, 1);
+        signed short prev = js_ev.value;
+        Arg narg = { .us=key };
+        js_ev.value = 1;
+        send_key(&narg);
+        Arg marg = { .us=key };
+        js_ev.value = 0;
+        send_key(&marg);
+        js_ev.value = prev;
     }
     morse_reset();
 }
 
-void send_key(unsigned short code, int value, int sync) {
-    emit(EV_KEY, code, value);
-    if (value == 0 || sync)
-        emit(EV_SYN, SYN_REPORT, 0);
+static void send_key(const Arg *arg) {
+    emit(EV_KEY, arg->us, js_ev.value);
+    emit(EV_SYN, SYN_REPORT, 0);
 }
 
 int setup() {

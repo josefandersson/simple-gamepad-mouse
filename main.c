@@ -316,9 +316,8 @@ int setup() {
     ioctl(uinp_fd, UI_SET_RELBIT, REL_WHEEL);
     ioctl(uinp_fd, UI_SET_RELBIT, REL_HWHEEL);
 
-    for (int i = 0; i < 256; i++) {
+    for (int i = 0; i < 256; i++)
         ioctl(uinp_fd, UI_SET_KEYBIT, i);
-    }
 
     ioctl(uinp_fd, UI_SET_KEYBIT, BTN_LEFT);
     ioctl(uinp_fd, UI_SET_KEYBIT, BTN_MIDDLE);

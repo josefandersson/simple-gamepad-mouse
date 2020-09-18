@@ -44,9 +44,9 @@ static void morse_write_or_space(const Arg *arg);
 static void mouse_movement(const Arg *arg);
 static void mouse_multiplier(const Arg *arg);
 static void mouse_scroll(const Arg *arg);
-void morse_write();
+static void morse_write();
 static void send_key(const Arg *arg);
-int setup();
+static int setup();
 
 #include "config.h"
 
@@ -105,7 +105,7 @@ void loop() {
             for (int i = 0; i < LENGTH(btnRules); i++) {
                 if(btnRules[i].number == js_ev.number && (btnRules[i].mask & button_states) == btnRules[i].mask) {
                     btnRules[i].func(&btnRules[i].arg);
-                    printf("Button %d matches, mask:%d\n", js_ev.number, btnRules[i].mask);
+                    // printf("Button %d matches, mask:%d\n", js_ev.number, btnRules[i].mask);
                     break;
                 }
             }
@@ -216,69 +216,10 @@ static void morse_write_or_space(const Arg *arg) {
     }
 }
 
-void morse_write() {
-    unsigned short key = 0;
-    switch (morse_index) {
-        case 1:
-            switch (morse_sequence) {
-                case 0: key = KEY_E; break;
-                case 1: key = KEY_T; break;
-            }
-            break;
-        case 2:
-            switch (morse_sequence) {
-                case 0: key = KEY_I; break;
-                case 1: key = KEY_A; break;
-                case 2: key = KEY_N; break;
-                case 3: key = KEY_M; break;
-            }
-            break;
-        case 3:
-            switch (morse_sequence) {
-                case 0: key = KEY_S; break;
-                case 1: key = KEY_U; break;
-                case 2: key = KEY_R; break;
-                case 3: key = KEY_W; break;
-                case 4: key = KEY_D; break;
-                case 5: key = KEY_K; break;
-                case 6: key = KEY_G; break;
-                case 7: key = KEY_O; break;
-            }
-            break;
-        case 4:
-            switch (morse_sequence) {
-                case 0: key = KEY_H; break;
-                case 1: key = KEY_V; break;
-                case 2: key = KEY_F; break;
-                case 4: key = KEY_L; break;
-                case 6: key = KEY_P; break;
-                case 7: key = KEY_J; break;
-                case 8: key = KEY_B; break;
-                case 9: key = KEY_X; break;
-                case 10: key = KEY_C; break;
-                case 11: key = KEY_Y; break;
-                case 12: key = KEY_Z; break;
-                case 13: key = KEY_Q; break;
-            }
-            break;
-        case 5:
-            switch (morse_sequence) {
-                case 0: key = KEY_5; break;
-                case 1: key = KEY_4; break;
-                case 3: key = KEY_3; break;
-                case 7: key = KEY_2; break;
-                case 10: key = KEY_KPPLUS; break;
-                case 15: key = KEY_1; break;
-                case 16: key = KEY_6; break;
-                case 17: key = KEY_EQUAL; break;
-                case 18: key = KEY_SLASH; break;
-                case 24: key = KEY_7; break;
-                case 28: key = KEY_8; break;
-                case 30: key = KEY_9; break;
-                case 31: key = KEY_0; break;
-            }
-            break;
-    }
+static void morse_write() {
+    int row_offset = 0;
+    for (int row = morse_index - 1;row != 0;row--) row_offset += 1 << row;
+    unsigned short key = morse_tree[row_offset + morse_sequence];
     if (key != 0) {
         signed short prev = js_ev.value;
         Arg narg = { .us=key };
@@ -297,7 +238,7 @@ static void send_key(const Arg *arg) {
     emit(EV_SYN, SYN_REPORT, 0);
 }
 
-int setup() {
+static int setup() {
     js_fd = open(DEVICE_JS0, O_RDONLY);
     if (js_fd < 0) {
         printf("Failed to open %s\n", DEVICE_JS0);

@@ -38,13 +38,13 @@ static void emit(unsigned short type, unsigned short code, int value);
 static double joystick_to_mouse(int joystick_value);
 static void loop();
 static void *loop_mouse(void *arg);
-static void morse_reset_or_backspace(const Arg *arg);
 static void morse_input(const Arg *arg);
+static void morse_reset_or_backspace(const Arg *arg);
+static void morse_write();
 static void morse_write_or_space(const Arg *arg);
 static void mouse_movement(const Arg *arg);
 static void mouse_multiplier(const Arg *arg);
 static void mouse_scroll(const Arg *arg);
-static void morse_write();
 static void send_key(const Arg *arg);
 static int setup();
 
@@ -75,20 +75,6 @@ static void emit(unsigned short type, unsigned short code, int value) {
 static double joystick_to_mouse(int joystick_value) {
     // TODO: This should be exponential, not linear
     return !(-deadzone < joystick_value && joystick_value < deadzone) * (joystick_value / 32768.0);
-}
-
-static void mouse_movement(const Arg *arg) {
-    if (arg->us == X) mouse_x = joystick_to_mouse(js_ev.value);
-    else              mouse_y = joystick_to_mouse(js_ev.value);
-}
-
-static void mouse_multiplier(const Arg *arg) {
-    mouse_multi = (1 - (js_ev.value + 32768) / 65536.0) * (mouse_fast - mouse_slow) + mouse_slow;
-}
-
-static void mouse_scroll(const Arg *arg) {
-    if (arg->us == X) scroll_x = joystick_to_mouse(js_ev.value) * 2;
-    else              scroll_y = -joystick_to_mouse(js_ev.value) * 2;
 }
 
 static void loop() {
@@ -198,6 +184,24 @@ static void morse_reset_or_backspace(const Arg *arg) {
     }
 }
 
+static void morse_write() {
+    int row_offset = 0;
+    for (int row = morse_index - 1;row != 0;row--) row_offset += 1 << row;
+    unsigned short key = morse_tree[row_offset + morse_sequence];
+    printf("row_offset:%d, key:%d, morse_sequence:%d\n", row_offset, key, morse_sequence);
+    if (key != 0) {
+        signed short prev = js_ev.value;
+        Arg narg = { .us=key };
+        js_ev.value = 1;
+        send_key(&narg);
+        Arg marg = { .us=key };
+        js_ev.value = 0;
+        send_key(&marg);
+        js_ev.value = prev;
+    }
+    morse_reset();
+}
+
 static void morse_write_or_space(const Arg *arg) {
     if (!js_ev.value)
         return;
@@ -215,22 +219,18 @@ static void morse_write_or_space(const Arg *arg) {
     }
 }
 
-static void morse_write() {
-    int row_offset = 0;
-    for (int row = morse_index - 1;row != 0;row--) row_offset += 1 << row;
-    unsigned short key = morse_tree[row_offset + morse_sequence];
-    printf("row_offset:%d, key:%d, morse_sequence:%d\n", row_offset, key, morse_sequence);
-    if (key != 0) {
-        signed short prev = js_ev.value;
-        Arg narg = { .us=key };
-        js_ev.value = 1;
-        send_key(&narg);
-        Arg marg = { .us=key };
-        js_ev.value = 0;
-        send_key(&marg);
-        js_ev.value = prev;
-    }
-    morse_reset();
+static void mouse_movement(const Arg *arg) {
+    if (arg->us == X) mouse_x = joystick_to_mouse(js_ev.value);
+    else              mouse_y = joystick_to_mouse(js_ev.value);
+}
+
+static void mouse_multiplier(const Arg *arg) {
+    mouse_multi = (1 - (js_ev.value + 32768) / 65536.0) * (mouse_fast - mouse_slow) + mouse_slow;
+}
+
+static void mouse_scroll(const Arg *arg) {
+    if (arg->us == X) scroll_x = joystick_to_mouse(js_ev.value) * 2;
+    else              scroll_y = -joystick_to_mouse(js_ev.value) * 2;
 }
 
 static void send_key(const Arg *arg) {

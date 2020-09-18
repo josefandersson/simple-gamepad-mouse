@@ -11,17 +11,9 @@
 #include <sys/types.h>
 #include <pthread.h>
 
-#include "mappings.c"
+#include "def.c"
 
 #define LENGTH(X) (sizeof X / sizeof X[0])
-
-#define DEVICE_JS0 "/dev/input/js0"
-#define DEVICE_UINPUT "/dev/uinput"
-
-#define DELAY 1000000/60
-#define JT_THRES 10000
-#define SPEED_MIN 7.0
-#define SPEED_MAX 20.0
 
 typedef union {
     unsigned short us;
@@ -68,7 +60,7 @@ static int uinp_fd;
 static int button_states;
 
 static char modifiers;
-static double mouse_x, mouse_y, mouse_multi = SPEED_MAX;
+static double mouse_x, mouse_y, mouse_multi;
 static int scroll_x, scroll_y;
 static unsigned char morse_index;
 static unsigned char morse_sequence;
@@ -83,7 +75,7 @@ int emit(unsigned short type, unsigned short code, int value) {
 }
 
 double joystick_to_mouse(int joystick_value) {
-    return !(-JT_THRES < joystick_value && joystick_value < JT_THRES) * (joystick_value / 32768.0);
+    return !(-deadzone < joystick_value && joystick_value < deadzone) * (joystick_value / 32768.0);
 }
 
 static void mouse_movement(const Arg *arg) {
@@ -92,7 +84,7 @@ static void mouse_movement(const Arg *arg) {
 }
 
 static void mouse_multiplier(const Arg *arg) {
-    mouse_multi = (1 - (js_ev.value + 32768) / 65536.0) * (SPEED_MAX - SPEED_MIN) + SPEED_MIN;
+    mouse_multi = (1 - (js_ev.value + 32768) / 65536.0) * (mouse_fast - mouse_slow) + mouse_slow;
 }
 
 static void mouse_scroll(const Arg *arg) {
@@ -142,20 +134,20 @@ void *loop_mouse(void *arg) {
         if (scroll_x != 0) {
             if (--scroll_x_wait < 0) {
                 emit(EV_REL, REL_HWHEEL, scroll_x);
-                scroll_x_wait = 4 * (1 - mouse_multi / SPEED_MAX) + 1;
+                scroll_x_wait = 4 * (1 - mouse_multi / mouse_fast) + 1;
             }
         } else scroll_x_wait = 0;
 
         if (scroll_y != 0) {
             if (--scroll_y_wait < 0) {
                 emit(EV_REL, REL_WHEEL, scroll_y);
-                scroll_y_wait = 4 * (1 - mouse_multi / SPEED_MAX) + 1;
+                scroll_y_wait = 4 * (1 - mouse_multi / mouse_fast) + 1;
             }
         } else scroll_y_wait = 0;
 
         if (mouse_x != 0 || mouse_y != 0 || scroll_y != 0 || scroll_x != 0)
             emit(EV_SYN, SYN_REPORT, 0);
-        usleep(DELAY);
+        usleep(loop_delay);
     }
     return NULL;
 }
@@ -171,6 +163,7 @@ int main() {
         return -1;
     }
 
+    mouse_multi = mouse_fast;
     loop();
     
     ioctl(uinp_fd, UI_DEV_DESTROY);

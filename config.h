@@ -1,3 +1,8 @@
+static const int    loop_delay = 1e6/60; // Nanoseconds between sending mouse events (1e6/<cycles per second>)
+static const int    deadzone   = 8000;   // Below what value (0-65k) stick/bumper should not trigger events
+static const double mouse_slow = 7.0;    // Lowest mouse speed multiplier
+static const double mouse_fast = 20.0;   // Greatest mouse speed multiplier
+
 static ButtonRule btnRules[] = {
    // Btn       Mask    Func                      Arg
     { GPB_LD,   MOD_RT, send_key,                 { .us=KEY_G         } },

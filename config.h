@@ -40,11 +40,11 @@ static AxisRule axisRules[] = {
 // Binary tree of all morse combinations
 // 0-bit is short and 1-bit is long:
 // Eg: .-. -> 010 (2), length:3 -> 3rd row, index 2 -> R
-// Eg: .--- -> 0111 (5), length:4 -> 4th row, index 5 -> J
+// Eg: .--- -> 0111 (7), length:4 -> 4th row, index 7 -> J
 // Put 0 for undefined combinations, each row must be twice the length of previous
 static const unsigned short morse_tree[] = {
     KEY_E, KEY_T,
     KEY_I, KEY_A, KEY_N, KEY_M,
     KEY_S, KEY_U, KEY_R, KEY_W, KEY_D, KEY_K, KEY_G, KEY_O,
-    KEY_H, KEY_V, KEY_F, KEY_L, KEY_P, KEY_J, KEY_B, KEY_X, KEY_C, KEY_Y, KEY_Z, KEY_Q, 0, 0,
+    KEY_H, KEY_V, KEY_F, 0, KEY_L, 0, KEY_P, KEY_J, KEY_B, KEY_X, KEY_C, KEY_Y, KEY_Z, KEY_Q, 0, 0,
     KEY_5, KEY_4, 0, KEY_3, 0, 0, 0, KEY_2, 0, 0, KEY_KPPLUS, 0, 0, 0, 0, KEY_1, KEY_6, KEY_EQUAL, KEY_SLASH, 0, 0, 0, 0, 0, KEY_7, 0, 0, 0, KEY_8, 0, KEY_9, KEY_0, 0 };

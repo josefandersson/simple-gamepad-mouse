@@ -34,10 +34,10 @@ typedef struct {
     const Arg arg;
 } AxisRule;
 
-int emit(unsigned short type, unsigned short code, int value);
-double joystick_to_mouse(int joystick_value);
-void loop();
-void *loop_mouse(void *arg);
+static void emit(unsigned short type, unsigned short code, int value);
+static double joystick_to_mouse(int joystick_value);
+static void loop();
+static void *loop_mouse(void *arg);
 static void morse_reset_or_backspace(const Arg *arg);
 static void morse_input(const Arg *arg);
 static void morse_write_or_space(const Arg *arg);
@@ -58,23 +58,22 @@ static int js_fd;
 static int uinp_fd;
 
 static int button_states;
-
-static char modifiers;
 static double mouse_x, mouse_y, mouse_multi;
 static int scroll_x, scroll_y;
 static unsigned char morse_index;
 static unsigned char morse_sequence;
 
-int emit(unsigned short type, unsigned short code, int value) {
+static void emit(unsigned short type, unsigned short code, int value) {
     memset(&inp_ev, 0, sizeof(inp_ev));
     gettimeofday(&inp_ev.time, NULL);
     inp_ev.type = type;
     inp_ev.code = code;
     inp_ev.value = value;
-    return write(uinp_fd, &inp_ev, sizeof(inp_ev));
+    write(uinp_fd, &inp_ev, sizeof(inp_ev));
 }
 
-double joystick_to_mouse(int joystick_value) {
+static double joystick_to_mouse(int joystick_value) {
+    // TODO: This should be exponential, not linear
     return !(-deadzone < joystick_value && joystick_value < deadzone) * (joystick_value / 32768.0);
 }
 
@@ -92,7 +91,7 @@ static void mouse_scroll(const Arg *arg) {
     else              scroll_y = -joystick_to_mouse(js_ev.value) * 2;
 }
 
-void loop() {
+static void loop() {
     while (1) {
         if (read(js_fd, &js_ev, sizeof(struct js_event)) < 0) {
             printf("Failed to read joystick event: %s\n", strerror(errno));
@@ -125,7 +124,7 @@ void loop() {
     }
 }
 
-void *loop_mouse(void *arg) {
+static void *loop_mouse(void *arg) {
     int scroll_x_wait = 0, scroll_y_wait = 0;
     while (1) {
         if (mouse_x != 0) emit(EV_REL, REL_X, mouse_x * mouse_multi);
@@ -220,6 +219,7 @@ static void morse_write() {
     int row_offset = 0;
     for (int row = morse_index - 1;row != 0;row--) row_offset += 1 << row;
     unsigned short key = morse_tree[row_offset + morse_sequence];
+    printf("row_offset:%d, key:%d, morse_sequence:%d\n", row_offset, key, morse_sequence);
     if (key != 0) {
         signed short prev = js_ev.value;
         Arg narg = { .us=key };

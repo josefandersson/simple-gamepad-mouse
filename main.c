@@ -28,7 +28,7 @@ typedef struct {
 
 typedef struct {
     unsigned char number;
-    unsigned char modifier;
+    unsigned char mask;
     unsigned char switches;
     void (*func)(const Arg *);
     const Arg arg;
@@ -90,7 +90,6 @@ static void loop() {
             for (int i = 0; i < LENGTH(btnRules); i++) {
                 if(btnRules[i].number == js_ev.number && (btnRules[i].mask & button_states) == btnRules[i].mask) {
                     btnRules[i].func(&btnRules[i].arg);
-                    // printf("Button %d matches, mask:%d\n", js_ev.number, btnRules[i].mask);
                     break;
                 }
             }
@@ -99,11 +98,25 @@ static void loop() {
                 button_states & ~GPB_TO_MOD(js_ev.number);
         } else if (js_ev.type == JS_EVENT_AXIS) {
             for (int i = 0; i < LENGTH(axisRules); i++) {
-                AxisRule rule = axisRules[i];
-                if (rule.number == js_ev.number)
-                    rule.func(&rule.arg);
+                if (axisRules[i].number == js_ev.number && (axisRules[i].mask & button_states) == axisRules[i].mask) {
+                    if (axisRules[i].switches) {
+                        int new_val = js_ev.value > deadzone;
+                        int mask = GPB_TO_MOD(GPB_DD + js_ev.number);
+                        if (((button_states & mask) == mask) != (js_ev.value > deadzone)) {
+                            int old_val = js_ev.value;
+                            js_ev.value = new_val;
+                            axisRules[i].func(&axisRules[i].arg);
+                            js_ev.value = old_val;
+                        }
+                    } else
+                        axisRules[i].func(&axisRules[i].arg);
+                    break;
+                }
             }
-            // button_states = js_ev.value + 32768 > JT_THRES ? button_states | GPB_TO_MOD(js_ev.number) : button_states & ~GPB_TO_MOD(js_ev.number);
+            if (js_ev.number == GPA_LB || js_ev.number == GPA_RB)
+                button_states = js_ev.value > deadzone ?
+                    button_states | GPB_TO_MOD((GPB_DD + js_ev.number)) :
+                    button_states & ~GPB_TO_MOD((GPB_DD + js_ev.number));
         }
 
         usleep(10);
@@ -188,7 +201,7 @@ static void morse_write() {
     int row_offset = 0;
     for (int row = morse_index - 1;row != 0;row--) row_offset += 1 << row;
     unsigned short key = morse_tree[row_offset + morse_sequence];
-    printf("row_offset:%d, key:%d, morse_sequence:%d\n", row_offset, key, morse_sequence);
+    // printf("row_offset:%d, key:%d, morse_sequence:%d\n", row_offset, key, morse_sequence);
     if (key != 0) {
         signed short prev = js_ev.value;
         Arg narg = { .us=key };

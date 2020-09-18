@@ -13,6 +13,7 @@ static ButtonRule btnRules[] = {
     { GPB_B,    MOD_RT, morse_input,              { .us=MORSE_LONG    } },
     { GPB_X,    MOD_RT, morse_reset_or_backspace, { 0                 } },
     { GPB_Y,    MOD_RT, morse_write_or_space,     { 0                 } },
+    // { GPB_RT,   0,      morse_reset,              { 0                 } },
     { GPB_A,    0,      send_key,                 { .us=BTN_LEFT      } },
     { GPB_B,    0,      send_key,                 { .us=BTN_RIGHT     } },
     { GPB_X,    0,      send_key,                 { .us=KEY_BACKSPACE } },
@@ -28,13 +29,13 @@ static ButtonRule btnRules[] = {
 };
 
 static AxisRule axisRules[] = {
-   // Axis       Mod Switches Func              Arg
-    { GPA_LJ_X,  0,  0,       mouse_movement,   { .us=X            } },
-    { GPA_LJ_Y,  0,  0,       mouse_movement,   { .us=Y            } },
-    { GPA_LB,    0,  0,       mouse_multiplier, { 0                } },
-    { GPA_RB,    0,  1,       send_key,         { .us=KEY_LEFTCTRL } },
-    { GPA_RJ_X,  0,  0,       mouse_scroll,     { .us=X            } },
-    { GPA_RJ_Y,  0,  0,       mouse_scroll,     { .us=Y            } },
+   // Axis      Mask Switches Func              Arg
+    { GPA_LJ_X, 0,   0,       mouse_movement,   { .us=X            } },
+    { GPA_LJ_Y, 0,   0,       mouse_movement,   { .us=Y            } },
+    { GPA_LB,   0,   0,       mouse_multiplier, { 0                } },
+    { GPA_RB,   0,   1,       send_key,         { .us=KEY_LEFTCTRL } },
+    { GPA_RJ_X, 0,   0,       mouse_scroll,     { .us=X            } },
+    { GPA_RJ_Y, 0,   0,       mouse_scroll,     { .us=Y            } },
 };
 
 // Binary tree of all morse combinations

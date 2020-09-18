@@ -26,7 +26,7 @@
 #define GPA_DP_Y 7
 
 // Buttons as masks
-#define GPB_TO_MOD(x) 1<<x
+#define GPB_TO_MOD(x) 1<<(x)
 #define MOD_A GPB_TO_MOD(GPB_A)
 #define MOD_B GPB_TO_MOD(GPB_B)
 #define MOD_X GPB_TO_MOD(GPB_X)

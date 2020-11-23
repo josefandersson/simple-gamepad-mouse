@@ -1,5 +1,5 @@
 BUILDFN=sgm
-CFLAGS=-pthread -Wall -O2 -o $(BUILDFN)
+CFLAGS=-pthread -Wall -O2 -L/usr/X11R6/lib -lX11 -o $(BUILDFN)
 
 clean:
 	rm $(BUILDFN)

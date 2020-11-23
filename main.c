@@ -12,6 +12,7 @@
 #include <pthread.h>
 
 #include "def.c"
+#include "tree.c"
 
 #define LENGTH(X) (sizeof X / sizeof X[0])
 
@@ -40,6 +41,7 @@ static void loop();
 static void *loop_mouse(void *arg);
 static void morse_input(const Arg *arg);
 static void morse_reset_or_backspace(const Arg *arg);
+static void morse_overlay(const Arg *arg);
 static void morse_write();
 static void morse_write_or_space(const Arg *arg);
 static void mouse_movement(const Arg *arg);
@@ -155,9 +157,15 @@ int main() {
     if (setup() < 0)
         return -1;
 
-    pthread_t thid;
-    if (pthread_create(&thid, NULL, loop_mouse, NULL) != 0) {
-        printf("Failed to create thread\n");
+    pthread_t thid_mouse;
+    if (pthread_create(&thid_mouse, NULL, loop_mouse, NULL) != 0) {
+        printf("Failed to create mouse move thread\n");
+        return -1;
+    }
+
+    pthread_t thid_overlay;
+    if (pthread_create(&thid_overlay, NULL, loop_overlay, NULL) != 0) {
+        printf("Failed to create overlay thread\n");
         return -1;
     }
 
@@ -175,6 +183,10 @@ int main() {
 static void morse_input(const Arg *arg) {
     if (!js_ev.value)
         return;
+
+    XFillRectangle(d, w, gc, 10*morse_index, 10, 20, 20);
+    XFlush(d);
+    
     morse_index++;
     morse_sequence = (morse_sequence << 1) | (arg->us == MORSE_LONG);
     if (morse_index > 4)
@@ -195,6 +207,15 @@ static void morse_reset_or_backspace(const Arg *arg) {
     } else {
         morse_reset();
     }
+}
+
+static void morse_overlay(const Arg *arg) {
+    if (js_ev.value) {
+        XMapWindow(d, w);
+    } else {
+        XUnmapWindow(d, w);
+    }
+    XFlush(d);
 }
 
 static void morse_write() {
@@ -252,6 +273,8 @@ static void send_key(const Arg *arg) {
 }
 
 static int setup() {
+    create_overlay();
+
     js_fd = open(DEVICE_JS0, O_RDONLY);
     if (js_fd < 0) {
         printf("Failed to open %s\n", DEVICE_JS0);

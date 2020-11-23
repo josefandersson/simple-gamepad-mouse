@@ -13,7 +13,7 @@ static ButtonRule btnRules[] = {
     { GPB_B,    MOD_RT, morse_input,              { .us=MORSE_LONG    } },
     { GPB_X,    MOD_RT, morse_reset_or_backspace, { 0                 } },
     { GPB_Y,    MOD_RT, morse_write_or_space,     { 0                 } },
-    // { GPB_RT,   0,      morse_reset,              { 0                 } },
+    { GPB_RT,   0,      morse_overlay,            { 0                 } },
     { GPB_A,    0,      send_key,                 { .us=BTN_LEFT      } },
     { GPB_B,    0,      send_key,                 { .us=BTN_RIGHT     } },
     { GPB_X,    0,      send_key,                 { .us=KEY_BACKSPACE } },

@@ -1,0 +1,39 @@
+* GRAPHICS!
+    - Morse overlay, draw the tree when morse mode is on
+
+* "Modes":
+    - Use LT/RT or BCK/STRT to switch between modes, maybe only BCK to cycle
+    - One mode with morse keys, one with application/script bindings (a, b, x, y)
+    - Use /sys/class/../xpad to change controller quadrant light repressenting each mode
+    - Media mode:
+        - a,b left/right-click
+        - x backspace
+        - y space
+        - strt enter
+        - dpad arrows
+        - ls escape
+        - rs middle-click
+        - lt system volume down
+        - rt system volume up
+        - 
+        - volume, vlc subs, play/pause, enter, escape
+    - Morse mode:
+        - a short
+        - b long
+        - x reset/backspace
+        - y write/space
+        - rt -> shift
+        - rb -> ctrl
+        - strt -> super
+        - lt -> alt
+        - dpad arrows
+    - Locked mode:
+        - bck+strt unlock
+
+What I need:
+    - Morse overlay
+    - Releasing modifier will "release" (send_key 0) all held keys (like space, cmd, shft etc)
+    - Shift key
+    - Ctrl key
+    - Wait for controller to connect if js0 isn't found
+    - "Disabled" mode (like BCK and STRT together) to disable inputs and thus letting a native program capture the input, like a game, steam, etc.
